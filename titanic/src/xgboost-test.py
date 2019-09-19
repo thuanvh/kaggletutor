@@ -6,7 +6,7 @@ import xgboost as xgb
 train = pd.read_csv('../input/train.csv')
 test = pd.read_csv('../input/test.csv')
 
-attrs = ['Pclass','Sex','Age', 'Fare', "Parch"]
+attrs = ['Pclass', 'Sex', 'Age', 'Fare', "Parch", 'SibSp', 'Fare', 'Embarked']
 bigx = train[attrs].append(test[attrs])
 
 for att in attrs:
@@ -17,6 +17,16 @@ bigx.at[nullfare.index,'Fare']= bigx['Fare'].median()
 
 le = LabelEncoder()
 bigx['Sex'] = le.fit_transform(bigx['Sex'])
+
+embcount = bigx['Embarked'].value_counts()
+embnan=bigx[bigx['Embarked'].isnull()]
+newembark = np.random.choice(['S','C','Q'],len(embnan))
+idx = 0
+for index, row in embnan.iterrows():
+    # print(index, row)
+    bigx.at[index,'Embarked'] = newembark[idx]
+    idx += 1
+bigx['Embarked'] = le.fit_transform(bigx['Embarked'])
 
 agecount = bigx['Age'].value_counts()
 dist = agecount / agecount.sum()
@@ -36,3 +46,4 @@ predictions= gbm.predict(testx)
 
 submission = pd.DataFrame({ 'PassengerId': test['PassengerId'],
                             'Survived': predictions})
+submission.to_csv("submission.csv", index=False)
