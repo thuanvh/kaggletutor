@@ -25,7 +25,7 @@ big_X['Fare'] = big_X['Fare'].fillna(big_X['Fare'].median())
 ages_probabilities = big_X['Age'].value_counts().to_frame()
 ages_probabilities['index1'] = ages_probabilities.index
 ages_probabilities = ages_probabilities.rename(columns={'Age': 'Count', 'index1': 'Age'})
-ages_probabilities = ages_probabilities.reindex_axis(['Age','Count'], axis=1)
+ages_probabilities = ages_probabilities.reindex(['Age','Count'], axis=1)
 ages_probabilities = ages_probabilities.reset_index()
 ages_probabilities = ages_probabilities.drop(["index"],axis=1)
 ages_probabilities['Probability'] = ages_probabilities['Count'] / big_X['Age'].value_counts().sum()
