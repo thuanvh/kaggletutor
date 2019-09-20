@@ -15,7 +15,7 @@ def substrings_in_string(big_string, substrings):
 train = pd.read_csv('../input/train.csv')
 test = pd.read_csv('../input/test.csv')
 
-attrs = ['Pclass', 'Sex', 'Age', 'Fare', "Parch", 'SibSp', 'Embarked', 'Name']
+attrs = ['Pclass', 'Sex', 'Age', 'Fare', "Parch", 'SibSp', 'Embarked', 'Name', 'Cabin']
 bigx = train[attrs].append(test[attrs])
 
 for att in attrs:
@@ -51,8 +51,10 @@ bigx['Title'] = le.fit_transform(bigx['Title'])
 bigx = bigx.drop('Name', axis=1)
 
 # Cabin
-# bigx = train[attrs].append(test[attrs])
 # Turning cabin number into Deck
+
+#bigx = train[attrs].append(test[attrs])
+bigx['Cabin']=bigx['Cabin'].map(lambda x: 'Unknown' if pd.isnull(x) else x)
 # bigx['2']=bigx['Cabin']
 # nullcabin = bigx[bigx['Cabin'].isnull()]
 # for index, row in nullcabin.iterrows():
@@ -60,9 +62,11 @@ bigx = bigx.drop('Name', axis=1)
 #     #    break
 #     print(index)
 #     bigx.at[index, '2'] = 'Unknown'
-#
-# cabin_list = ['A', 'B', 'C', 'D', 'E', 'F', 'T', 'G', 'Unknown']
-# bigx['Deck'] = bigx['Cabin'].map(lambda x: substrings_in_string(x, cabin_list))
+
+cabin_list = ['A', 'B', 'C', 'D', 'E', 'F', 'T', 'G', 'Unknown']
+bigx['Deck'] = bigx['Cabin'].map(lambda x: substrings_in_string(x, cabin_list))
+bigx['Deck'] = le.fit_transform(bigx['Deck'])
+bigx = bigx.drop('Cabin', axis = 1)
 
 # Fare column
 nullfare = bigx[bigx['Fare'].isnull()]
