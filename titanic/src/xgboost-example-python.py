@@ -65,3 +65,6 @@ predictions = gbm.predict(test_X)
 submission = pd.DataFrame({ 'PassengerId': test_df['PassengerId'],
                             'Survived': predictions })
 submission.to_csv("submission.csv", index=False)
+
+truth = pd.read_csv('../input/gender_submission.csv')
+truthcol = truth['Survived']
