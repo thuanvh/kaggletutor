@@ -55,18 +55,13 @@ bigx = bigx.drop('Name', axis=1)
 
 #bigx = train[attrs].append(test[attrs])
 bigx['Cabin']=bigx['Cabin'].map(lambda x: 'Unknown' if pd.isnull(x) else x)
-# bigx['2']=bigx['Cabin']
-# nullcabin = bigx[bigx['Cabin'].isnull()]
-# for index, row in nullcabin.iterrows():
-#     #if(index > 10):
-#     #    break
-#     print(index)
-#     bigx.at[index, '2'] = 'Unknown'
-
 cabin_list = ['A', 'B', 'C', 'D', 'E', 'F', 'T', 'G', 'Unknown']
 bigx['Deck'] = bigx['Cabin'].map(lambda x: substrings_in_string(x, cabin_list))
 bigx['Deck'] = le.fit_transform(bigx['Deck'])
 bigx = bigx.drop('Cabin', axis = 1)
+
+#Familysize
+bigx['Family_Size']=bigx['SibSp']+bigx['Parch']
 
 # Fare column
 nullfare = bigx[bigx['Fare'].isnull()]
@@ -97,13 +92,17 @@ for index,row in bigx[bigx['Age'].isnull()].iterrows() :
     bigx.at[index, 'Age'] = newage[i]
     i+=1
 
+# Note choose or not
+bigx['Age*Class']=bigx['Age']*bigx['Pclass']
+bigx['Fare_Per_Person']=bigx['Fare']/(bigx['Family_Size']+1)
+
 # Training
 
 trainx = bigx[0:len(train)]
 testx = bigx[len(train)::]
 train_y = train['Survived']
 
-gbm = xgb.XGBClassifier(max_depth=3,learning_rate=0.01,n_estimators=300).fit(trainx, train_y )
+gbm = xgb.XGBClassifier(max_depth=5,learning_rate=0.01,n_estimators=300).fit(trainx, train_y )
 predictions= gbm.predict(testx)
 
 # Submit
