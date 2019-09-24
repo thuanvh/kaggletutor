@@ -63,7 +63,7 @@ test = test[attrs]
 bigx = train[attrs].append(test[attrs])
 len_train = len(train)
 #del train, test
-#gc.collect()
+gc.collect()
 
 for a in attrs:
     print(a, len(bigx[bigx[a].isnull()]))
@@ -76,6 +76,7 @@ bigx['weekday'] = bigx['TransactionDT'] / 3600 / 24 % 7
 
 #print(bigx['hours'])
 bigx = bigx.drop('TransactionDT', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card1
 c1mean = train['card1'].mean()
@@ -84,6 +85,7 @@ c1min = train['card1'].min()
 bigx['card1_mean'] = (bigx['card1'] - c1mean)/(c1max - c1min)
 #sea.distplot(bigx['card1_mean'])
 bigx = bigx.drop('card1', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card2
 c2max = train['card2'].max()
@@ -92,6 +94,7 @@ bigx['card2_fill'] = bigx['card2'].map(lambda x : np.random.randint(c2min,c2max)
 
 sea.distplot(bigx['card2_fill'])
 bigx = bigx.drop('card2', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card3
 sea.countplot(bigx['card3'])
@@ -99,6 +102,7 @@ train['card3'].value_counts()
 bigx['card3_fill'] = bigx['card3'].map(lambda x : 150.0 if pd.isnull(x) else x)
 bigx['card3_fill'].value_counts()
 bigx = bigx.drop('card3', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card4
 train['card4'].value_counts()
@@ -106,6 +110,7 @@ bigx['card4_fill'] = bigx['card4'].map(lambda x : 'Unknown' if pd.isnull(x) else
 bigx = encodeLabel(bigx, 'card4_fill')
 bigx['card4_fill'].value_counts()
 bigx = bigx.drop('card4', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card5
 sea.countplot(bigx['card5'])
@@ -113,6 +118,7 @@ train['card5'].value_counts()
 bigx['card5_fill'] = bigx['card5'].map(lambda x : 226.0 if pd.isnull(x) else x)
 bigx['card5_fill'].value_counts()
 bigx = bigx.drop('card5', axis = 1)
+print(bigx.columns.values.tolist())
 
 #card6
 train['card6'].value_counts()
@@ -120,6 +126,7 @@ bigx['card6_fill'] = bigx['card6'].map(lambda x : 'Unknown' if pd.isnull(x) else
 bigx = encodeLabel(bigx, 'card6_fill')
 bigx['card6_fill'].value_counts()
 bigx = bigx.drop('card6', axis = 1)
+print(bigx.columns.values.tolist())
 
 #addr1
 c2max = train['addr1'].max()
@@ -128,6 +135,7 @@ bigx['addr1_fill'] = bigx['addr1'].map(lambda x : np.random.randint(c2min,c2max)
 
 sea.distplot(bigx['addr1_fill'])
 bigx = bigx.drop('addr1', axis = 1)
+print(bigx.columns.values.tolist())
 
 #addr2
 sea.countplot(bigx['addr2'])
@@ -135,6 +143,7 @@ train['addr2'].value_counts()
 bigx['addr2_fill'] = bigx['addr2'].map(lambda x : 87.0 if pd.isnull(x) else x)
 bigx['addr2_fill'].value_counts()
 bigx = bigx.drop('addr2', axis = 1)
+print(bigx.columns.values.tolist())
 
 #dist1
 sea.countplot(bigx['dist1'])
@@ -143,6 +152,7 @@ c2max = train['dist1'].max()
 c2min = train['dist1'].min()
 bigx['dist1_fill'] = bigx['dist1'].map(lambda x : np.random.randint(c2min,c2max) if pd.isnull(x) else x)
 bigx = bigx.drop('dist1', axis = 1)
+print(bigx.columns.values.tolist())
 
 #dist2
 sea.countplot(bigx['dist2'])
@@ -151,23 +161,34 @@ c2max = train['dist2'].max()
 c2min = train['dist2'].min()
 bigx['dist2_fill'] = bigx['dist2'].map(lambda x : np.random.randint(c2min,c2max) if pd.isnull(x) else x)
 bigx = bigx.drop('dist2', axis = 1)
+print(bigx.columns.values.tolist())
+
+bigx.to_csv("../input/dist2.csv", index = None, header = True)
 
 #P_emaildomain
 def binEmailDict(data, field_list, email_list_dict, field_NA_name):
+    dict_map = dict()
     for f in field_list:
         for k in email_list_dict.keys():
             data[f + k] = 0
-        data[f + field_NA_name] = 0
+        data[f + field_NA_name] = 0    
+    print(data.columns.values.tolist())
+    for key,value in email_list_dict.items():
+        for v in value:
+            dict_map[v] = key
+    rowcount = 0
     for i, row in data.iterrows():
+        rowcount += 1
+        if rowcount % 10000 == 0 :
+            print(rowcount)
         for field in field_list:
             field_in_list = False
             if not isinstance(row[field],float) :
                 if not pd.isnull(row[field]) :
-                    for key,value in email_list_dict.items():
-                        if row[field] in value:            
-                            data.at[i, field + key] = 1
-                            field_in_list = True
-                            break
+                    if row[field] in dict_map:
+                        data.at[i, field + dict_map[row[field]]] = 1
+                        field_in_list = True
+                        break
             if not field_in_list:
                 data.at[i, field + field_NA_name] = 1
                 
@@ -187,8 +208,16 @@ dict1 = {
 
 #d = bigx[0:5].copy()
 binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
+
+title_list = bigx.columns.values.tolist()
+for x in title_list:
+    if x.startswith("P_emaildomainhas") or x.startswith("R_emaildomainhas"):
+        print(x, bigx[x].sum())
+
 bigx = bigx.drop("P_emaildomain", axis = 1)
 bigx = bigx.drop("R_emaildomain", axis = 1)
+
+bigx.to_csv("../input/train_final.csv", index = None, header = True)
 
 #d = d.drop('P_emaildomain', axis = 1)
 #d.columns.values.tolist()
@@ -197,7 +226,9 @@ print(bigx.columns.values.tolist())
 trainx = bigx[0:len_train]
 testx = bigx[len_train::]
 
+#train_y = pd.read_csv("../input/train_all.csv", names=["isFraud"])
 
+print('Training on', len(trainx), 'samples', 'Number of isFraud:', train_y.sum())
 gbm = xgb.XGBClassifier(max_depth=5,learning_rate=0.01,n_estimators=300).fit(trainx, train_y )
 predictions= gbm.predict(testx)
 

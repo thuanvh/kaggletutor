@@ -32,9 +32,10 @@ test = pd.read_csv('../input/test_all.csv')
 # V319,V320,V321,V322,V323,V324,V325,V326,V327,V328,V329,V330,V331,V332,V333,V334,V335,V336,V337,V338,V339
 
 
-attrs = ['Pclass', 'Sex', 'Age', 'Fare', "Parch", 'SibSp', 'Embarked', 'Name', 'Cabin']
+attrs = ['TransactionDT','TransactionAmt','ProductCD',
+    'card1','card2,card3,card4,card5,card6,addr1,addr2,dist1,dist2,P_emaildomain,R_emaildomain]
 bigx = train[attrs].append(test[attrs])
-
+len_train = len(train)
 del train, test
 
 gc.collect()
