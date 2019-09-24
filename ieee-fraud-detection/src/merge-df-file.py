@@ -42,13 +42,20 @@ def encodeLabel(data, lbl):
     data[lbl] = le.fit_transform(data[lbl])
     return data
 
+def encodeOneHot(df, lbl, lblprefix):
+    df = pd.concat([df,pd.get_dummies(df[lbl], prefix=lblprefix, dummy_na = True)],axis=1)
+    df.drop([lbl],axis=1, inplace=True)
+    return df
+
 # mergeAllFile()
 train = pd.read_csv("../input/train_all.csv")
 test = pd.read_csv("../input/test_all.csv")
 train_y = train['isFraud']
 test_id = test['TransactionID']
 attrs = ['TransactionDT','TransactionAmt','ProductCD',
-    'card1','card2','card3','card4','card5','card6','addr1','addr2','dist1','dist2','P_emaildomain','R_emaildomain']
+    'card1','card2','card3','card4','card5','card6','addr1','addr2','dist1','dist2','P_emaildomain','R_emaildomain',
+    'C1','C2','C3',
+    ]
 
 # Correlation ('V300','V309','V111','V124','V106','V125','V315','V134','V102','V123','V316','V113',
 #              'V136','V305','V110','V299','V289','V286','V318','V304','V116','V284','V293',
@@ -69,7 +76,9 @@ for a in attrs:
     print(a, len(bigx[bigx[a].isnull()]))
 
 #sea.countplot(train['ProductCD'])
-bigx = encodeLabel(bigx, 'ProductCD')
+#bigx = encodeLabel(bigx, 'ProductCD')
+bigx = encodeOneHot(bigx, 'ProductCD', 'ProductCD')
+
 #sea.countplot(bigx['ProductCD'])
 bigx['hours'] = bigx['TransactionDT'] / 3600 % 24
 bigx['weekday'] = bigx['TransactionDT'] / 3600 / 24 % 7
@@ -166,7 +175,7 @@ print(bigx.columns.values.tolist())
 bigx.to_csv("../input/dist2.csv", index = None, header = True)
 
 #P_emaildomain
-def binEmailDict(data, field_list, email_list_dict, field_NA_name):
+def binEmailDictIter(data, field_list, email_list_dict, field_NA_name):
     dict_map = dict()
     for f in field_list:
         for k in email_list_dict.keys():
@@ -191,7 +200,17 @@ def binEmailDict(data, field_list, email_list_dict, field_NA_name):
                         break
             if not field_in_list:
                 data.at[i, field + field_NA_name] = 1
-                
+
+def binEmailDict(data, field_list, email_list_dict, field_NA_name):
+    dict_map = dict()
+    for key,value in email_list_dict.items():
+        for v in value:
+            dict_map[v] = key
+    for field in field_list:
+        data[field]=data[field].map(dict_map)
+        data = encodeOneHot(data, field, field)
+    return data
+
 dict1 = {
     "hasYahoo" : ["yahoo.fr", "yahoo.de", "yahoo.es", "yahoo.co.uk", "yahoo.com", "yahoo.com.mx", "ymail.com", "rocketmail.com", "frontiernet.net"],
     "hasMSMail" : ["hotmail.com", "live.com.mx", "live.com", "msn.com", "hotmail.es", "outlook.es", "hotmail.fr", "hotmail.de", "hotmail.co.uk"],
@@ -207,7 +226,7 @@ dict1 = {
 }
 
 #d = bigx[0:5].copy()
-binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
+bigx = binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
 
 title_list = bigx.columns.values.tolist()
 for x in title_list:
@@ -216,6 +235,11 @@ for x in title_list:
 
 bigx = bigx.drop("P_emaildomain", axis = 1)
 bigx = bigx.drop("R_emaildomain", axis = 1)
+
+#C1,C2,C3
+bigx['C1'].fillna(1.0,inplace=True)
+bigx['C2'].fillna(1.0,inplace=True)
+bigx['C3'].fillna(0.0,inplace=True)
 
 bigx.to_csv("../input/train_final.csv", index = None, header = True)
 
@@ -229,7 +253,7 @@ testx = bigx[len_train::]
 #train_y = pd.read_csv("../input/train_all.csv", names=["isFraud"])
 
 print('Training on', len(trainx), 'samples', 'Number of isFraud:', train_y.sum())
-gbm = xgb.XGBClassifier(max_depth=5,learning_rate=0.01,n_estimators=300).fit(trainx, train_y )
+gbm = xgb.XGBClassifier(max_depth=5,learning_rate=0.05,n_estimators=500).fit(trainx, train_y )
 predictions= gbm.predict(testx)
 
 # Submit
