@@ -230,11 +230,11 @@ bigx = binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
 
 title_list = bigx.columns.values.tolist()
 for x in title_list:
-    if x.startswith("P_emaildomainhas") or x.startswith("R_emaildomainhas"):
+    if x.startswith("P_emaildomain_has") or x.startswith("R_emaildomain_has"):
         print(x, bigx[x].sum())
 
-bigx = bigx.drop("P_emaildomain", axis = 1)
-bigx = bigx.drop("R_emaildomain", axis = 1)
+#bigx = bigx.drop("P_emaildomain", axis = 1)
+#bigx = bigx.drop("R_emaildomain", axis = 1)
 
 #C1,C2,C3
 bigx['C1'].fillna(1.0,inplace=True)
