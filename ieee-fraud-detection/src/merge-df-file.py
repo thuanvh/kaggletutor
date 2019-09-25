@@ -37,15 +37,19 @@ def mergefile(file_trans, file_id, file_output):
     trans.merge(id_df, on="TransactionID", how="left")
     trans.to_csv(file_output)
 
-def encodeLabel(data, lbl):
+def encodeLabel(df, name):
     le = preprocessing.LabelEncoder()
-    data[lbl] = le.fit_transform(data[lbl])
-    return data
+    return pd.DataFrame({name : le.fit_transform(df)})
+    
 
-def encodeOneHot(df, lbl, lblprefix):
-    df = pd.concat([df,pd.get_dummies(df[lbl], prefix=lblprefix, dummy_na = True)],axis=1)
-    df.drop([lbl],axis=1, inplace=True)
-    return df
+def encodeOneHot(df, lblprefix):
+    return pd.get_dummies(df, prefix=lblprefix, dummy_na = True)
+    
+def saveColumn(df, nameprefix):
+    df.to_csv("../input/" + "column_" + nameprefix + ".csv", index = None, header = True)    
+
+def haveColumn(nameprefix):
+    return os.path.exists("../input/" + "column_" + nameprefix + ".csv")
 
 # mergeAllFile()
 train = pd.read_csv("../input/train_all.csv")
@@ -84,6 +88,10 @@ attrs = ['TransactionDT','TransactionAmt','ProductCD',
     'V338', 'V339', 
     ]
 
+loadattrs = []
+for a in attrs:
+    if not haveColumn(a):
+        loadattrs.append(a)
 # Correlation ('V300','V309','V111','V124','V106','V125','V315','V134','V102','V123','V316','V113',
 #              'V136','V305','V110','V299','V289','V286','V318','V304','V116','V284','V293',
 #              'V137','V295','V301','V104','V311','V115','V109','V119','V321','V114','V133','V122','V319',
@@ -92,118 +100,137 @@ attrs = ['TransactionDT','TransactionAmt','ProductCD',
 #              'V240', 'V325', 'V138', 'V154', 'V153', 'V330', 'V142', 'V195', 'V302', 'V328', 'V327', 
 #              'V198', 'V196', 'V155')
 
-train = train[attrs]
-test = test[attrs]
-bigx = train[attrs].append(test[attrs])
+train = train[loadattrs]
+test = test[loadattrs]
+bigx = train.append(test)
 len_train = len(train)
 
-c1mean = train['card1'].mean()
-c1max = train['card1'].max()
-c1min = train['card1'].min()
-c2max = train['card2'].max()
-c2min = train['card2'].min()
-addr1max = train['addr1'].max()
-addr1min = train['addr1'].min()
-dist1max = train['dist1'].max()
-dist1min = train['dist1'].min()
-dist2max = train['dist2'].max()
-dist2min = train['dist2'].min()
+if 'card1' in loadattrs:
+    c1mean = train['card1'].mean()
+    c1max = train['card1'].max()
+    c1min = train['card1'].min()
+if 'card2' in loadattrs:
+    c2max = train['card2'].max()
+    c2min = train['card2'].min()
+if 'addr1' in loadattrs:
+    addr1max = train['addr1'].max()
+    addr1min = train['addr1'].min()
+if 'dist1' in loadattrs:
+    dist1max = train['dist1'].max()
+    dist1min = train['dist1'].min()
+if 'dist2' in loadattrs:
+    dist2max = train['dist2'].max()
+    dist2min = train['dist2'].min()
 del test
 del train
 gc.collect()
 
-for a in attrs:
-    print(a, len(bigx[bigx[a].isnull()]))
+# for a in attrs:
+#     print(a, len(bigx[bigx[a].isnull()]))
 
-#sea.countplot(train['ProductCD'])
+####sea.countplot(train['ProductCD'])
 #bigx = encodeLabel(bigx, 'ProductCD')
-bigx = encodeOneHot(bigx, 'ProductCD', 'ProductCD')
+if not haveColumn('ProductCD') :
+    saveColumn( encodeOneHot(bigx['ProductCD'], 'ProductCD'), 'ProductCD' )
+    bigx.drop('ProductCD', axis = 1, inplace=True)
 
-#sea.countplot(bigx['ProductCD'])
-bigx['hours'] = bigx['TransactionDT'] / 3600 % 24
-bigx['weekday'] = bigx['TransactionDT'] / 3600 / 24 % 7
-
-#print(bigx['hours'])
-bigx = bigx.drop('TransactionDT', axis = 1)
-print(bigx.columns.values.tolist())
+####sea.countplot(bigx['ProductCD'])
+if not haveColumn("TransactionDT"):
+    df = pd.DataFrame()
+    df['hours'] = bigx['TransactionDT'] / 3600 % 24
+    df['weekday'] = bigx['TransactionDT'] / 3600 / 24 % 7
+    saveColumn(df, 'TransactionDT')
+    #print(bigx['hours'])
+    bigx.drop('TransactionDT', axis = 1, inplace=True)
+    print(bigx.columns.values.tolist())
 
 #card1
-bigx['card1_mean'] = (bigx['card1'] - c1mean)/(c1max - c1min)
-#sea.distplot(bigx['card1_mean'])
-bigx = bigx.drop('card1', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("card1"):
+    saveColumn( (bigx['card1'] - c1mean)/(c1max - c1min), "card1")
+    ###sea.distplot(bigx['card1_mean'])
+    bigx.drop('card1', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #card2
-bigx['card2_fill'] = bigx['card2'].map(lambda x : np.random.randint(c2min,c2max) if pd.isnull(x) else x)
+if not haveColumn("card2"):
+    saveColumn( bigx['card2'].map(lambda x : np.random.randint(c2min,c2max) if pd.isnull(x) else x), 'card2')
 
-#sea.distplot(bigx['card2_fill'])
-bigx = bigx.drop('card2', axis = 1)
-print(bigx.columns.values.tolist())
+    ###sea.distplot(bigx['card2_fill'])
+    bigx.drop('card2', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #card3
-sea.countplot(bigx['card3'])
-#train['card3'].value_counts()
-bigx['card3_fill'] = bigx['card3'].map(lambda x : 150.0 if pd.isnull(x) else x)
-bigx['card3_fill'].value_counts()
-bigx = bigx.drop('card3', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("card3"):
+    ##sea.countplot(bigx['card3'])
+    #train['card3'].value_counts()
+    saveColumn( bigx['card3'].map(lambda x : 150.0 if pd.isnull(x) else x), 'card3')
+    #bigx['card3_fill'].value_counts()
+    bigx.drop('card3', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #card4
-#train['card4'].value_counts()
-bigx['card4_fill'] = bigx['card4'].map(lambda x : 'Unknown' if pd.isnull(x) else x)
-bigx = encodeLabel(bigx, 'card4_fill')
-bigx['card4_fill'].value_counts()
-bigx = bigx.drop('card4', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("card4"):
+    #train['card4'].value_counts()
+    df = bigx['card4'].map(lambda x : 'Unknown' if pd.isnull(x) else x)
+    saveColumn( encodeLabel(df, 'card4'), 'card4')
+    #bigx['card4_fill'].value_counts()
+    bigx.drop('card4', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #card5
-sea.countplot(bigx['card5'])
-#train['card5'].value_counts()
-bigx['card5_fill'] = bigx['card5'].map(lambda x : 226.0 if pd.isnull(x) else x)
-bigx['card5_fill'].value_counts()
-bigx = bigx.drop('card5', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("card5"):
+    #seacountplot(bigx['card5'])
+    #train['card5'].value_counts()
+    saveColumn( bigx['card5'].map(lambda x : 226.0 if pd.isnull(x) else x), 'card5')
+    #bigx['card5_fill'].value_counts()
+    bigx.drop('card5', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #card6
-#train['card6'].value_counts()
-bigx['card6_fill'] = bigx['card6'].map(lambda x : 'Unknown' if pd.isnull(x) else x)
-bigx = encodeLabel(bigx, 'card6_fill')
-bigx['card6_fill'].value_counts()
-bigx = bigx.drop('card6', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("card6"):
+    #train['card6'].value_counts()
+    df = bigx['card6'].map(lambda x : 'Unknown' if pd.isnull(x) else x)
+    saveColumn( encodeLabel(df, 'card6'), 'card6')
+    #bigx['card6_fill'].value_counts()
+    bigx.drop('card6', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #addr1
-bigx['addr1_fill'] = bigx['addr1'].map(lambda x : np.random.randint(addr1min,addr1max) if pd.isnull(x) else x)
+if not haveColumn("addr1"):
+    saveColumn( bigx['addr1'].map(lambda x : np.random.randint(addr1min,addr1max) if pd.isnull(x) else x) , 'addr1')
 
-#sea.distplot(bigx['addr1_fill'])
-bigx = bigx.drop('addr1', axis = 1)
-print(bigx.columns.values.tolist())
+    ##seadistplot(bigx['addr1_fill'])
+    bigx.drop('addr1', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #addr2
-sea.countplot(bigx['addr2'])
-#train['addr2'].value_counts()
-bigx['addr2_fill'] = bigx['addr2'].map(lambda x : 87.0 if pd.isnull(x) else x)
-#bigx['addr2_fill'].value_counts()
-bigx = bigx.drop('addr2', axis = 1)
-print(bigx.columns.values.tolist())
+if not haveColumn("addr2"):
+    #seacountplot(bigx['addr2'])
+    #train['addr2'].value_counts()
+    saveColumn( bigx['addr2'].map(lambda x : 87.0 if pd.isnull(x) else x), 'addr2')
+    #bigx['addr2_fill'].value_counts()
+    bigx.drop('addr2', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #dist1
-sea.countplot(bigx['dist1'])
-#train['dist1'].value_counts()
+if not haveColumn("dist1"):
+    #seacountplot(bigx['dist1'])
+    #train['dist1'].value_counts()
 
-bigx['dist1_fill'] = bigx['dist1'].map(lambda x : np.random.randint(dist1min,dist1max) if pd.isnull(x) else x)
-bigx = bigx.drop('dist1', axis = 1)
-print(bigx.columns.values.tolist())
+    saveColumn( bigx['dist1'].map(lambda x : np.random.randint(dist1min,dist1max) if pd.isnull(x) else x), 'dist1')
+    bigx.drop('dist1', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
 #dist2
-sea.countplot(bigx['dist2'])
-#train['dist2'].value_counts()
+if not haveColumn("dist2"):
+    ###sea.countplot(bigx['dist2'])
+    #train['dist2'].value_counts()
 
-bigx['dist2_fill'] = bigx['dist2'].map(lambda x : np.random.randint(dist2min,dist2max) if pd.isnull(x) else x)
-bigx = bigx.drop('dist2', axis = 1)
-print(bigx.columns.values.tolist())
+    saveColumn( bigx['dist2'].map(lambda x : np.random.randint(dist2min,dist2max) if pd.isnull(x) else x), 'dist2')
+    bigx.drop('dist2', axis = 1, inplace = True)
+    print(bigx.columns.values.tolist())
 
-bigx.to_csv("../input/dist2.csv", index = None, header = True)
+    bigx.to_csv("../input/dist2.csv", index = None, header = True)
 
 #P_emaildomain
 def binEmailDictIter(data, field_list, email_list_dict, field_NA_name):
@@ -241,55 +268,69 @@ def binEmailDict(data, field_list, email_list_dict, field_NA_name):
         data[field]=data[field].map(dict_map)
         data = encodeOneHot(data, field, field)
     return data
+if not haveColumn("P_emaildomain") or not haveColumn("R_emaildomain"):
+    dict1 = {
+        "hasYahoo" : ["yahoo.fr", "yahoo.de", "yahoo.es", "yahoo.co.uk", "yahoo.com", "yahoo.com.mx", "ymail.com", "rocketmail.com", "frontiernet.net"],
+        "hasMSMail" : ["hotmail.com", "live.com.mx", "live.com", "msn.com", "hotmail.es", "outlook.es", "hotmail.fr", "hotmail.de", "hotmail.co.uk"],
+        "hasMac" : ["icloud.com", "mac.com", "me.com"],
+        "hasProdigy" : ["prodigy.net.mx", "att.net", "sbxglobal.net"],
+        "hasCenturyLink" : ["centurylink.net", "embarqmail.com", "q.com"],
+        "hasAIM" : ["aim.com", "aol.com"],
+        "hasTWC" : ["twc.com", "charter.com"],
+        "hasProton" : ["protonmail.com"],
+        "hasComCast" : ["comcast.net"],
+        "hasGmail" : ["gmail.com"],
+        "hasAnonymous" : ["anonymous.com"],
+    }
+    dict_map = dict()
+    for key,value in dict1.items():
+        for v in value:
+            dict_map[v] = key
+    for field in ['P_emaildomain','R_emaildomain']:
+        df = bigx[field].map(dict_map)
+        saveColumn( encodeOneHot(df, field), field)
+    #d = bigx[0:5].copy()
+    #bigx = binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
 
-dict1 = {
-    "hasYahoo" : ["yahoo.fr", "yahoo.de", "yahoo.es", "yahoo.co.uk", "yahoo.com", "yahoo.com.mx", "ymail.com", "rocketmail.com", "frontiernet.net"],
-    "hasMSMail" : ["hotmail.com", "live.com.mx", "live.com", "msn.com", "hotmail.es", "outlook.es", "hotmail.fr", "hotmail.de", "hotmail.co.uk"],
-    "hasMac" : ["icloud.com", "mac.com", "me.com"],
-    "hasProdigy" : ["prodigy.net.mx", "att.net", "sbxglobal.net"],
-    "hasCenturyLink" : ["centurylink.net", "embarqmail.com", "q.com"],
-    "hasAIM" : ["aim.com", "aol.com"],
-    "hasTWC" : ["twc.com", "charter.com"],
-    "hasProton" : ["protonmail.com"],
-    "hasComCast" : ["comcast.net"],
-    "hasGmail" : ["gmail.com"],
-    "hasAnonymous" : ["anonymous.com"],
-}
+    # title_list = bigx.columns.values.tolist()
+    # for x in title_list:
+    #     if x.startswith("P_emaildomain_has") or x.startswith("R_emaildomain_has"):
+    #         print(x, bigx[x].sum())
 
-#d = bigx[0:5].copy()
-bigx = binEmailDict(bigx, ['P_emaildomain','R_emaildomain'], dict1, "hasNA")
-
-title_list = bigx.columns.values.tolist()
-for x in title_list:
-    if x.startswith("P_emaildomain_has") or x.startswith("R_emaildomain_has"):
-        print(x, bigx[x].sum())
-
-#bigx = bigx.drop("P_emaildomain", axis = 1)
-#bigx = bigx.drop("R_emaildomain", axis = 1)
+    bigx.drop("P_emaildomain", axis = 1, inplace = True)
+    bigx.drop("R_emaildomain", axis = 1, inplace = True)
 
 #C1,C2,C3
 C_list = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11', 'C12', 'C13', 'C14']
 for c_field in C_list:
-    bigx[c_field].fillna(0,inplace=True)
+    if not haveColumn(c_field):
+        saveColumn(bigx[c_field].fillna(0), c_field)
+        bigx.drop(c_field, axis = 1, inplace = True)
 #bigx['C2'].fillna(1.0,inplace=True)
 #bigx['C3'].fillna(0.0,inplace=True)
 #D1,D2,D3
 D_list = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'D14', 'D15']
 for D_field in D_list:
-    bigx[D_field].fillna(-999,inplace=True)
+    if not haveColumn(D_field):
+        saveColumn(bigx[D_field].fillna(-999), D_field)
+        bigx.drop(D_field, axis = 1, inplace = True)
 
 M_list = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9']
 for M_field in M_list:
-    bigx = encodeOneHot(bigx, M_field, M_field)
+    if not haveColumn(M_field):
+        saveColumn(encodeOneHot(bigx[M_field], M_field), M_field)
+        bigx.drop(M_field, axis = 1, inplace = True)
 
 
 for i in range(1,340):
     V_field = 'V' + str(i)
-    bigx[V_field].fillna(-999,inplace=True)
+    if not haveColumn(V_field):
+        saveColumn(bigx[V_field].fillna(-999), V_field)
+        bigx.drop(V_field, axis = 1, inplace = True)
 
 bigx.to_csv("../input/train_final.csv", index = None, header = True)
 
-#d = d.drop('P_emaildomain', axis = 1)
+#d = d.drop('P_emaildomain', axis = 1, inplace = True)
 #d.columns.values.tolist()
 print(bigx.columns.values.tolist())
 # training
