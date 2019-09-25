@@ -54,7 +54,9 @@ train_y = train['isFraud']
 test_id = test['TransactionID']
 attrs = ['TransactionDT','TransactionAmt','ProductCD',
     'card1','card2','card3','card4','card5','card6','addr1','addr2','dist1','dist2','P_emaildomain','R_emaildomain',
-    'C1','C2','C3',
+    'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11', 'C12', 'C13', 'C14',
+    'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'D14', 'D15',
+    'M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9',
     ]
 
 # Correlation ('V300','V309','V111','V124','V106','V125','V315','V134','V102','V123','V316','V113',
@@ -237,9 +239,19 @@ for x in title_list:
 #bigx = bigx.drop("R_emaildomain", axis = 1)
 
 #C1,C2,C3
-bigx['C1'].fillna(1.0,inplace=True)
-bigx['C2'].fillna(1.0,inplace=True)
-bigx['C3'].fillna(0.0,inplace=True)
+C_list = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9', 'C10', 'C11', 'C12', 'C13', 'C14']
+for c_field in C_list:
+    bigx[c_field].fillna(0,inplace=True)
+#bigx['C2'].fillna(1.0,inplace=True)
+#bigx['C3'].fillna(0.0,inplace=True)
+#D1,D2,D3
+D_list = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D10', 'D11', 'D12', 'D13', 'D14', 'D15']
+for D_field in D_list:
+    bigx[D_field].fillna(-999,inplace=True)
+
+M_list = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9']
+for M_field in M_list:
+    bigx = encodeOneHot(bigx, M_field, M_field)
 
 bigx.to_csv("../input/train_final.csv", index = None, header = True)
 
