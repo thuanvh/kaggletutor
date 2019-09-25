@@ -48,6 +48,9 @@ def encodeOneHot(df, lblprefix):
 def saveColumn(df, nameprefix):
     df.to_csv("../input/" + "column_" + nameprefix + ".csv", index = None, header = True)    
 
+def readColumn(nameprefix):
+    return df.read_csv("../input/" + "column_" + nameprefix + ".csv")
+
 def haveColumn(nameprefix):
     return os.path.exists("../input/" + "column_" + nameprefix + ".csv")
 
@@ -99,11 +102,11 @@ for a in attrs:
 #              'V1','V14','V41','V65','V88', 'V89', 'V107', 'V68', 'V28', 'V27', 'V29', 'V241','V269',
 #              'V240', 'V325', 'V138', 'V154', 'V153', 'V330', 'V142', 'V195', 'V302', 'V328', 'V327', 
 #              'V198', 'V196', 'V155')
+len_train = len(train)
 
 train = train[loadattrs]
 test = test[loadattrs]
 bigx = train.append(test)
-len_train = len(train)
 
 if 'card1' in loadattrs:
     c1mean = train['card1'].mean()
@@ -327,6 +330,14 @@ for i in range(1,340):
     if not haveColumn(V_field):
         saveColumn(bigx[V_field].fillna(-999), V_field)
         bigx.drop(V_field, axis = 1, inplace = True)
+
+del bigx
+gc.collect()
+
+bigx = pd.DataFrame()
+
+for att in attrs:
+    bigx = pd.concat([bigx, readColumn(att)], axis = 1)
 
 bigx.to_csv("../input/train_final.csv", index = None, header = True)
 
