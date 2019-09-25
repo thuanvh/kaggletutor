@@ -49,7 +49,7 @@ def saveColumn(df, nameprefix):
     df.to_csv("../input/" + "column_" + nameprefix + ".csv", index = None, header = True)    
 
 def readColumn(nameprefix):
-    return df.read_csv("../input/" + "column_" + nameprefix + ".csv")
+    return pd.read_csv("../input/" + "column_" + nameprefix + ".csv")
 
 def haveColumn(nameprefix):
     return os.path.exists("../input/" + "column_" + nameprefix + ".csv")
@@ -146,6 +146,13 @@ if not haveColumn("TransactionDT"):
     #print(bigx['hours'])
     bigx.drop('TransactionDT', axis = 1, inplace=True)
     print(bigx.columns.values.tolist())
+
+if not haveColumn("TransactionAmt"):
+    saveColumn(bigx['TransactionAmt'], 'TransactionAmt')
+    #print(bigx['hours'])
+    bigx.drop('TransactionAmt', axis = 1, inplace=True)
+    print(bigx.columns.values.tolist())
+
 
 #card1
 if not haveColumn("card1"):
